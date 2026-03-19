@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>GoShrink</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net"></script>
+</head>
+<body class="bg-gray-50 text-gray-900 font-sans">
+<div class="max-w-3xl mx-auto py-12 px-4">
+    <h1 class="text-4xl font-bold text-center mb-8 text-indigo-600">GoShrink</h1>
+
+    <!-- Форма создания -->
+    <div class="bg-white p-6 rounded-xl shadow-md mb-8">
+        <div class="space-y-4">
+            <div>
+                <!-- Добавлен атрибут for для связи с longUrl -->
+                <label for="longUrl" class="block text-sm font-medium text-gray-700">Длинная ссылка</label>
+                <input id="longUrl" type="url" placeholder="https://very-long-url.com..." class="mt-1 block w-full border-gray-300 rounded-md shadow-sm p-2 border focus:ring-indigo-500 focus:border-indigo-500">
+            </div>
+            <div>
+                <!-- Добавлен атрибут for для связи с customCode -->
+                <label for="customCode" class="block text-sm font-medium text-gray-700">Свой код (опционально)</label>
+                <input id="customCode" type="text" placeholder="my-cool-link" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm p-2 border">
+            </div>
+            <button onclick="shorten()" class="w-full bg-indigo-600 text-white py-2 px-4 rounded-md hover:bg-indigo-700 transition">Сократить</button>
+        </div>
+        <div id="result" class="mt-4 hidden p-4 bg-green-50 border border-green-200 rounded-md break-all">
+            <p class="text-sm text-green-800">Готово! Ваша ссылка:</p>
+            <a id="shortLink" href="#" target="_blank" class="text-indigo-600 font-bold underline"></a>
+        </div>
+    </div>
+
+    <!-- Поиск аналитики -->
+    <div class="bg-white p-6 rounded-xl shadow-md">
+        <h2 class="text-xl font-semibold mb-4">Проверить аналитику</h2>
+
+        <!-- ИСПРАВЛЕННЫЙ ФРАГМЕНТ -->
+        <div class="flex flex-col gap-2">
+            <label for="statsCode" class="block text-sm font-medium text-gray-700">Код ссылки</label>
+            <div class="flex gap-2">
+                <input id="statsCode" type="text" placeholder="Введите код ссылки" class="flex-1 border-gray-300 rounded-md shadow-sm p-2 border focus:ring-indigo-500 focus:border-indigo-500">
+                <button onclick="loadAnalytics()" class="bg-gray-800 text-white py-2 px-4 rounded-md hover:bg-black transition">Показать</button>
+            </div>
+        </div>
+
+        <div id="statsContent" class="mt-6 hidden">
+            <p class="text-lg">Всего переходов: <span id="totalClicks" class="font-bold text-indigo-600">0</span></p>
+            <div class="mt-4 h-64">
+                <canvas id="clicksChart"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    const API_BASE = "http://localhost:8080";
+    let chart = null;
+
+    async function shorten() {
+        const url = document.getElementById('longUrl').value;
+        const custom_code = document.getElementById('customCode').value;
+
+        try {
+            const response = await fetch(`${API_BASE}/shorten`, {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ url, custom_code })
+            });
+
+            const data = await response.json();
+            if (response.ok) {
+                const resDiv = document.getElementById('result');
+                const linkA = document.getElementById('shortLink');
+                const fullShortUrl = `${API_BASE}/s/${data.short_code}`;
+                linkA.href = fullShortUrl;
+                linkA.innerText = fullShortUrl;
+                resDiv.classList.remove('hidden');
+            } else {
+                alert("Ошибка: " + (data.error || "не удалось создать ссылку"));
+            }
+        } catch (e) {
+            alert("Ошибка подключения к серверу");
+        }
+    }
+
+    async function loadAnalytics() {
+        const code = document.getElementById('statsCode').value;
+        try {
+            const response = await fetch(`${API_BASE}/analytics/${code}`);
+            const data = await response.json();
+
+            if (response.ok) {
+                document.getElementById('statsContent').classList.remove('hidden');
+                document.getElementById('totalClicks').innerText = data.total_clicks;
+
+                const ctx = document.getElementById('clicksChart').getContext('2d');
+                if (chart) chart.destroy();
+
+                chart = new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: data.by_day.map(d => d.date),
+                        datasets: [{
+                            label: 'Переходы по дням',
+                            data: data.by_day.map(d => d.count),
+                            borderColor: 'rgb(79, 70, 229)',
+                            tension: 0.1
+                        }]
+                    }
+                });
+            } else {
+                alert("Аналитика не найдена");
+            }
+        } catch (e) {
+            alert("Ошибка подключения к серверу");
+        }
+    }
+</script>
+</body>
+</html>
