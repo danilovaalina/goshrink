@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
@@ -37,11 +36,6 @@ func main() {
 	}
 
 	a := api.New(service.New(repository.New(pool, r)))
-	err = http.ListenAndServe(cf.Addr, a)
-	if err != nil {
-		log.Fatal().Stack().Err(err).Send()
-	}
-
 	err = a.Start(cf.Addr)
 	if err != nil {
 		log.Fatal().Stack().Err(err).Send()
