@@ -60,13 +60,7 @@ func (a *API) shorten(c echo.Context) error {
 		ShortCode: req.CustomCode,
 	})
 	if err != nil {
-		if errors.Is(err, model.ErrCustomCodeTaken) {
-			return c.JSON(http.StatusConflict, echo.Map{
-				"error": "this custom name is already in use, please try another one",
-			})
-		}
-
-		return c.JSON(http.StatusInternalServerError, echo.Map{"error": "failed to create short link"})
+		return err
 	}
 
 	return c.JSON(http.StatusCreated, a.linkToResponse(link))
@@ -82,13 +76,9 @@ func (a *API) redirect(c echo.Context) error {
 
 	url, err := a.service.OriginURL(c.Request().Context(), shortCode, click)
 	if err != nil {
-		if errors.Is(err, model.ErrLinkNotFound) {
-			return c.String(http.StatusNotFound, "link not found")
-		}
-		return c.JSON(http.StatusInternalServerError, echo.Map{"error": "internal server error"})
+		return err
 	}
 
-	// Делаем 302 Found редирект
 	return c.Redirect(http.StatusFound, url)
 }
 
@@ -97,10 +87,7 @@ func (a *API) analytics(c echo.Context) error {
 
 	stats, err := a.service.Analytics(c.Request().Context(), shortCode)
 	if err != nil {
-		if errors.Is(err, model.ErrLinkNotFound) {
-			return c.JSON(http.StatusNotFound, echo.Map{"error": "link not found"})
-		}
-		return c.JSON(http.StatusInternalServerError, echo.Map{"error": "failed to load analytics"})
+		return err
 	}
 
 	return c.JSON(http.StatusOK, a.analyticsToResponse(stats))

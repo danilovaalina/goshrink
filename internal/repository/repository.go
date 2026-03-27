@@ -48,7 +48,7 @@ func (r *Repository) CreateLink(ctx context.Context, link model.Link) (model.Lin
 		return model.Link{}, errors.WithStack(err)
 	}
 
-	return r.linkModel(row), nil
+	return r.toModel(row), nil
 }
 
 func (r *Repository) Link(ctx context.Context, shortCode string) (model.Link, error) {
@@ -80,7 +80,7 @@ func (r *Repository) Link(ctx context.Context, shortCode string) (model.Link, er
 		return model.Link{}, errors.WithStack(err)
 	}
 
-	l = r.linkModel(row)
+	l = r.toModel(row)
 
 	if err = r.storeLinkInRedis(ctx, l); err != nil {
 		log.Warn().Err(err).Str("short_code", shortCode).Send()
@@ -101,7 +101,7 @@ func (r *Repository) SaveClick(ctx context.Context, click model.Click) error {
 	return nil
 }
 
-func (r *Repository) linkModel(row linkRow) model.Link {
+func (r *Repository) toModel(row linkRow) model.Link {
 	return model.Link{
 		ID:        row.ID,
 		OriginURL: row.OriginURL,
